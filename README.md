@@ -13,6 +13,9 @@
 
 ### dsh-desktop-wallpaper 速览
 
+> 上手入口（含可直接发给 Agent 的说明）：[GETTING-STARTED.md](skills/dsh-desktop-wallpaper/GETTING-STARTED.md)
+
+
 - **做什么**：把视频/图片变成 DSH 桌面窗口的背景壁纸，左下角带开关胶囊。
 - **怎么做**：一个 DSH 客户端插件（`template/plugin/`），装在固定本地目录；**不需要**调试端口、守护进程、浏览器扩展。
 - **一句话经验**：插件里**不要**注册 `ctx.effect(teardown)`，插件目录**不要**放可移动盘。

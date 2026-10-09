@@ -212,7 +212,10 @@ Register-ScheduledTask -TaskName 'DSH Wallpaper Video Server' -Action $act -Trig
 | 路径 | 用途 |
 |---|---|
 | `template/plugin/` | **可直接安装的插件**（package.json / cordis.patch.yml / index.js / client.js） |
-| `scripts/install-plugin.ps1` | 一键安装 + 自检 |
+| `GETTING-STARTED.md` | 使用者上手 + 可直接发给 Agent 的一段话 |
+| `scripts/bootstrap.ps1` | **一条命令**：装技能 + 装插件 + 视频服务自启 |
+| `scripts/copy-workshop-url.ps1` | 取规范工坊链接并放入剪贴板（WebAPI，不需 steamcommunity.com） |
+| `scripts/install-plugin.ps1` | 仅安装插件 + 自检 |
 | `scripts/discover-wallpaper.ps1` | 定位本机（Steam 创意工坊）壁纸文件 + 取 WebAPI 元数据 |
 | `reference/getting-the-wallpaper.md` | 素材获取引导与合规注意（Agent 检查清单） |
 | `optional/video-server/wallpaper-server.mjs` | 本地视频服务（Range + CORS，仅 127.0.0.1） |

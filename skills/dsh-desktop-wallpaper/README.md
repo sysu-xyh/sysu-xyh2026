@@ -20,6 +20,10 @@
 
 细节、现象与判定方法见 [reference/failure-modes.md](reference/failure-modes.md)。
 
+## 先看这个
+
+- 使用者上手 / 交给 Agent 的一段话：[GETTING-STARTED.md](GETTING-STARTED.md)
+
 ## 安装
 
 ```powershell
