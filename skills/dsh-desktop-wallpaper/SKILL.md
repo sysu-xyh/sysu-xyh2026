@@ -173,6 +173,31 @@ Register-ScheduledTask -TaskName 'DSH Wallpaper Video Server' -Action $act -Trig
 
 用 `wscript.exe` + `.vbs` 包装是为了**不弹黑窗**（用 `cmd /c start ...` 会弹）。
 
+## 遇到未覆盖的问题并解决后：回填现场记录
+
+**策略：Agent 自动落盘 + 本地提交（静默，不打扰用户）；推送永远由仓库所有者人工完成。**
+
+完整协议见 `reference/field-notes/README.md`。要点：
+
+- **什么时候写**（三条同时成立）：skill 文档/脚本里确实没有 → 你已实际解决并验证 → 对他人可复用。
+  纯环境问题（盘掉了、代理没开、权限不足）**不要**写进仓库。
+- **写到哪**：`reference/field-notes/YYYY-MM-DD-<slug>.md`，用协议里的模板
+  （症状 / 复现 / 根因 / 解法 / 验证 / 适用边界）。
+- **顺手回填**：若 `SKILL.md` 里有对应的过时或缺失表述，一并修正 —— 这才是知识回填的重点。
+- **怎么做**（推荐用脚本，它内置换行前面的脱敏扫描与本地提交）：
+  ```powershell
+  powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\record-field-note.ps1 `
+    -Title "<一句话>" -Symptom "<现象>" -Cause "<根因>" -Fix "<解法>" -Verification "<怎么验证>"
+  ```
+  脚本**不含任何 push 逻辑**；连远端都不需要存在。
+- **绝不推送**：本仓库是 Public，推送即进入不可逆的公开历史。
+  提交之后，只需（如用户问起）说明"已在本地提交 N 条现场记录，需要你在 GitHub Desktop 点一次 Push 才会公开"。
+- **不要打扰用户**：本地提交是静默动作，不弹确认、不要求用户操作。
+- **尊重只读场景**：若用户声明"skills 目录只读"、或该副本从只读位置加载，
+  **只把记录内容输出到对话**，不做任何 git 操作。
+- **脱敏红线**：field notes 会被全世界看到。禁止写入个人绝对路径、主机名、令牌、
+  内网 IP、SID/GUID；描述环境用类型化说法（`windows-11`、`default profile`、`non-ASCII install path`）。
+  脚本会强制扫描并在命中时**拒绝写入**（退码 2）。
 ## 卸载
 
 1. 删除 `PROFILE\package.json` 里的 `@local/dsh-wallpaper-live`（依赖与 bundles 两处）。
@@ -193,3 +218,5 @@ Register-ScheduledTask -TaskName 'DSH Wallpaper Video Server' -Action $act -Trig
 | `optional/video-server/wallpaper-server.mjs` | 本地视频服务（Range + CORS，仅 127.0.0.1） |
 | `optional/video-server/start-video-server-silent.vbs` | 静默启动包装（计划任务用） |
 | `reference/failure-modes.md` | 各失败方案的实测现象与判定方法 |
+| `reference/field-notes/` | **现场记录**：skill 未覆盖的问题与解法（含回填协议） |
+| `scripts/record-field-note.ps1` | 写现场记录 + **仅本地**提交（脱敏扫描，绝不推送） |

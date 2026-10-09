@@ -105,3 +105,16 @@ reference/failure-modes.md    五个失败方案的实测档案与判定方法
 ## License
 
 MIT
+
+## 现场记录与提交策略（重要）
+
+本仓库鼓励 Agent 在使用 skill 时**把新知识回填**，但发布动作由人把控：
+
+| 动作 | 谁做 | 说明 |
+|---|---|---|
+| 写 `reference/field-notes/*.md` | **Agent 自动** | 附带脱敏扫描（个人路径 / 令牌 / 内网 IP / SID 命中即拒绝） |
+| `git commit`（本地） | **Agent 自动、静默** | 不打扰用户、不弹确认；提交尾带 `[agent-field-note]` 便于筛选 |
+| `git push`（公开） | **仅仓库所有者** | Agent **永不推送**：公开历史不可撤销 |
+
+协议全文：[skills/dsh-desktop-wallpaper/reference/field-notes/README.md](skills/dsh-desktop-wallpaper/reference/field-notes/README.md)。
+筛选 Agent 提交：`git log --grep '\[agent-field-note\]'`；撤销一条：`git reset --soft HEAD~1`。
