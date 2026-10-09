@@ -56,7 +56,15 @@ foreach ($k in @('HKLM:\SOFTWARE\WOW6432Node\Valve\Steam','HKLM:\SOFTWARE\Valve\
     if ($p) { $steamRoots += $p }
   } catch {}
 }
-$steamRoots += @('C:\Program Files (x86)\Steam','C:\Program Files\Steam','D:\Steam','E:\Steam')
+# fallback candidates when the registry has no InstallPath: the usual Steam folder names
+# on every currently mounted drive (covers D:\Steam, E:\Games\Steam, ... without listing
+# any machine-specific path). The registry value above always wins when present.
+foreach ($drive in (Get-PSDrive -PSProvider FileSystem -ErrorAction SilentlyContinue)) {
+  foreach ($name in @('Steam', 'SteamLibrary', 'Games\Steam')) {
+    $cand = Join-Path ($drive.Root) $name
+    if (Test-Path $cand) { $steamRoots += $cand }
+  }
+}
 $steamRoots = $steamRoots | Where-Object { $_ -and (Test-Path $_) } | Select-Object -Unique
 foreach ($r in $steamRoots) { Line ("  steam: " + $r) }
 
