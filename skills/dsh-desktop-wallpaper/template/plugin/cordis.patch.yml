@@ -1,0 +1,3 @@
+- insert:
+    - id: dsh-wallpaper-live
+      name: '@local/dsh-wallpaper-live'

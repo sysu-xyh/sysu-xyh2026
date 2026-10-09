@@ -1,0 +1,19 @@
+{
+  "name": "@local/dsh-wallpaper-live",
+  "version": "1.4.0",
+  "private": true,
+  "type": "module",
+  "description": "Animated DeepSeek wallpaper for the Harness Web UI (plays a local video or shows a still image behind the UI).",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js"
+  },
+  "dsh": {
+    "bundle": { "patch": "./cordis.patch.yml" },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": []
+    }
+  }
+}

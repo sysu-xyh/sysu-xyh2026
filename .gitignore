@@ -1,0 +1,9 @@
+# 调试/运行产物（绝对不要进仓库）
+_frames/
+_edgetest/
+_testprofile/
+*.mp4
+*.webm
+!optional/**
+node_modules/
+*.log
