@@ -8,6 +8,37 @@
 
 ---
 
+### 让用户直接把壁纸 URL 发给你（首选，最准）
+
+不要靠"标题/描述"去猜是哪张壁纸。**让用户在 Steam 里复制该壁纸的链接，粘贴给 Agent**，然后你从 URL 里取出数字 id：
+
+```
+https://steamcommunity.com/sharedfiles/filedetails/?id=3814486439
+                                                    ^^^^^^^^ publishedFileId
+```
+
+用户怎么复制（在 Steam 客户端或浏览器打开该壁纸页面）：
+
+1. 进入壁纸的**工坊页面**（客户端：创意工坊 → 打开该壁纸详情；浏览器：工坊网页）。
+2. 页面**右上角那排操作按钮**里找到 **分享（share）** 按钮 —— 它就在 **“留言 / 评论”** 入口旁边（网页标记为 `id="ShareItemBtn"`，与 `comments` 标签同处一行）。
+3. 点击后弹出**分享弹窗**，其中 **“页面链接 / 复制链接”** 那一项（`share_controls_page_link`）就是该壁纸的 URL。
+   在部分版本里点这个按钮会**直接复制**到剪贴板；若没自动复制，就在弹窗里手动选中整条链接复制。
+4. 把整条链接粘贴给 Agent。
+
+> 也可以直接在浏览器地址栏复制：打开该壁纸页面时，地址栏里的 `.../sharedfiles/filedetails/?id=<id>` 就是同一条链接。
+
+Agent 拿到链接后：
+
+```powershell
+# 从任意形式的链接里取出 id（支持 ...?id=123、...&id=123、steam://url/CommunityFilePage/123）
+$url = '<用户粘贴的链接>'
+$id = ([regex]::Match($url, '(?:\?|&)id=(\d+)|CommunityFilePage/(\d+)')).Groups[1..2].Value | Where-Object { $_ } | Select-Object -First 1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\discover-wallpaper.ps1 -PublishedFileId $id -Metadata -CopyTo <固定本地目录>
+```
+
+**只给链接还不够**：Steam 只有在用户**订阅**该壁纸后才会把文件下载到本地。
+所以顺序是 —— 用户复制链接给你 → 你据此确认是哪一件（可用 `-Metadata` 看标题/标签/预览图）→
+**提示用户在 Steam 里点“订阅”并等下载完成** → 再运行发现脚本定位本地文件。
 ## 0. 先问用户三个问题
 
 1. 壁纸是 **Wallpaper Engine** 上的（Steam 创意工坊）？还是本地现成的图片/视频？

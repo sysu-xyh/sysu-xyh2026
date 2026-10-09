@@ -52,20 +52,24 @@ description: Use when someone wants an animated/live wallpaper, background video
 **本 skill 不附带任何壁纸素材**：`client.js` 里的 `VIDEO_URL` / `POSTER_URL` 是占位地址。
 素材通常来自 **Wallpaper Engine 创意工坊**（Steam AppID `431960`），流程是**引导用户自己完成**：
 
-1. 询问用户：来源（创意工坊 / 本地已有文件）与类型（**视频** / **静态图** / **scene 工程**）。
-2. 让用户在 **Steam 客户端**里找到该壁纸并点 **订阅**（Steam 会下载到本地缓存）。
+1. **先拿到壁纸链接（最准的一步）**：让用户在 Steam 的壁纸页面点右上角 **分享（share）** 按钮
+   —— 它就挨着 **“留言 / 评论”** 入口（网页标记 `id="ShareItemBtn"`）；弹窗里的 **页面链接 / 复制链接**
+   就是该壁纸 URL（一般点了就直接复制）。请用户把整条链接粘给你，你再取 `?id=<数字>`。
+   > 如果用户已经在浏览器里打开该页面，直接复制地址栏里的 `.../sharedfiles/filedetails/?id=<id>` 也一样。
+2. 询问用户：类型（**视频** / **静态图** / **scene 工程**），以及是否已经**订阅**。
+3. 让用户在 **Steam 客户端**里找到该壁纸并点 **订阅**（Steam 会下载到本地缓存）。
    - **不要**引导用户去第三方工坊下载站；**不要**替用户下载或散布他人作品。
-3. 用脚本定位本机文件并（可选）复制到固定本地目录：
+4. 用脚本定位本机文件并（可选）复制到固定本地目录：
    ```powershell
    powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\discover-wallpaper.ps1 -PublishedFileId <id> -Metadata -CopyTo D:\dsh-wallpaper\assets
    ```
    它会解析 `libraryfolders.vdf` 找出所有 Steam 库，定位
    `<lib>\steamapps\workshop\content\431960\<id>\`，列出内容并判定类型。
-4. 需要标题/标签/预览图时用 **Steam WebAPI**（若 `steamcommunity.com` 打不开也可用）：
+5. 需要标题/标签/预览图时用 **Steam WebAPI**（若 `steamcommunity.com` 打不开也可用）：
    `POST https://api.steampowered.com/ISteamRemoteStorage/GetPublishedFileDetails/v1/`，
    取 `title` / `tags` / `preview_url`（大图可加 `?imw=3840&imh=2160&ima=fit&impolicy=Letterbox`）。
    > 未登录状态下工坊页面里**没有直链**，别去抓网页找下载地址。
-5. `scene.pkg`（scene 类壁纸）不是普通视频，只能取预览图做静态背景，或让用户换视频类壁纸。
+6. `scene.pkg`（scene 类壁纸）不是普通视频，只能取预览图做静态背景，或让用户换视频类壁纸。
 
 详细检查清单与版权注意：`reference/getting-the-wallpaper.md`。
 

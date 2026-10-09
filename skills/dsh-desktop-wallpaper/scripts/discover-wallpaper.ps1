@@ -29,7 +29,8 @@
   After copying, print the exact command + client.js values to use.
 #>
 param(
-  [Parameter(Mandatory=$true)][string]$PublishedFileId,
+  [Parameter(Mandatory=$false)][string]$PublishedFileId,
+  [string]$Url = '',
   [string]$AppId = '431960',
   [string]$CopyTo = '',
   [switch]$Metadata,
@@ -38,6 +39,14 @@ param(
 
 $ErrorActionPreference = 'Continue'
 function Line($m) { Write-Host $m }
+
+# accept a pasted workshop URL: ...?id=123 / ...&id=123 / steam://url/CommunityFilePage/123
+if (-not $PublishedFileId -and $Url) {
+  $m = [regex]::Match($Url, '(?:\?|&)id=(\d+)|CommunityFilePage/(\d+)')
+  if ($m.Success) { $PublishedFileId = ($m.Groups[1].Value + $m.Groups[2].Value) }
+}
+if (-not $PublishedFileId) { Write-Host 'ERROR: pass -PublishedFileId <id> or -Url <workshop url>'; exit 3 }
+Line ('target id: ' + $PublishedFileId)
 
 Line "=== 1) Steam libraries ==="
 $steamRoots = @()
