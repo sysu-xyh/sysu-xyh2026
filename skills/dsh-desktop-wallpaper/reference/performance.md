@@ -120,3 +120,33 @@ ffmpeg -hide_banner -y -i <源> -an `
 - 裁掉尾部与首帧几乎相同的一段（往往能自然衔接）；
 - 或在接缝处做 0.2–0.4s 的交叉淡化（会略微改变观感，且需要更复杂的滤镜图）。
 
+
+## 附：`autoplay blocked` 与"重启后没画面"
+
+### autoplay blocked
+
+胶囊显示 `wallpaper ON · autoplay blocked`：壁纸层与视频文件都正常（否则会是 `video failed`），
+是被**自动播放策略**拒绝了 `play()`。静音视频通常允许自动播放，但 Electron 窗口仍可能拒绝。
+
+**根治**：给启动快捷方式加上 Chromium 开关（`scripts/bootstrap.ps1` 会自动做这件事）：
+
+```
+--autoplay-policy=no-user-gesture-required
+```
+
+手工等价操作：右键 Harness 快捷方式 → 属性 → 目标，在末尾追加这个开关。
+
+**兜底**：插件 v1.5+ 会在 `play()` 被拒后挂一次性交互监听（`pointerdown` / `keydown` / `wheel`），
+用户第一次点击/按键/滚动时自动恢复播放，并每 1.5 秒重试最多 60 秒。
+
+### 重启后没画面（服务进程不在）
+
+壁纸的视频由**同机的本地服务**提供。如果服务进程被结束（例如宿主重启时连带带走了它），
+视频就取不到。检查与恢复：
+
+```powershell
+(Test-NetConnection 127.0.0.1 -Port 8787 -InformationLevel Quiet)   # False = 服务没在跑
+Start-Process "C:\Program Files\nodejs\node.exe" '"<技能目录>\optional\video-server\wallpaper-server.mjs"'
+```
+
+长期稳定：用计划任务在登录时静默启动它（`bootstrap.ps1` 已注册，任务名 `DSH Wallpaper Video Server`）。

@@ -1,6 +1,6 @@
 {
   "name": "@local/dsh-wallpaper-live",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "private": true,
   "type": "module",
   "description": "Animated DeepSeek wallpaper for the Harness Web UI (plays a local video or shows a still image behind the UI).",

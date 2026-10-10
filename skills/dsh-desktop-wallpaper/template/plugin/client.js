@@ -5,8 +5,11 @@
  * rgb(21,21,23) centre column), not the --dsw-alias-* tokens, so token overrides alone
  * leave the UI opaque. While the wallpaper is ON we therefore make those measured
  * surfaces translucent with attribute selectors that survive build-hash changes, and
- * raise the scrim so text stays readable. Toggling off removes every injected rule,
- * restoring the original look exactly.
+ * raise the scrim so text stays readable. Toggling off removes every injected rule.
+ *
+ * Playback: the window should be launched with --autoplay-policy=no-user-gesture-required
+ * (see scripts/bootstrap.ps1). If the policy still blocks play(), the retry ladder below
+ * resumes on the first pointer/key event and reports the state in the pill.
  */
 window.__ModuleLoader__.load({
   id: '@local/dsh-wallpaper-live',
@@ -48,7 +51,8 @@ window.__ModuleLoader__.load({
       inject: [],
       apply(ctx) {
         var layer = null, layerStyle = null, onStyle = null, pillStyleEl = null, pill = null;
-        var video = null, poster = null, retries = 0, retryTimer = null, disposed = false, on = true;
+        var video = null, poster = null, retryTimer = null, gestureHooked = false;
+        var disposed = false, on = true, state = 'init';
 
         function log() { console.log.apply(console, ['[dsh-wallpaper]'].concat([].slice.call(arguments))); }
 
@@ -65,6 +69,15 @@ window.__ModuleLoader__.load({
           onStyle = null;
         }
 
+        function paint() {
+          if (!pill) return;
+          var view = video && video.readyState >= 3
+            ? (video.videoWidth + 'x' + video.videoHeight)
+            : (state === 'blocked' ? 'autoplay blocked' : 'loading');
+          var suffix = state === 'blocked' ? ' - click anywhere' : '';
+          pill.innerHTML = '<b>wallpaper</b> ' + (on ? 'ON' : 'OFF') + (on ? ' \u00b7 ' + view + suffix : ' (click)') + (on ? ' (click)' : '');
+        }
+
         function ensurePill() {
           if (pill || !document.body) return;
           pillStyleEl = document.createElement('style');
@@ -78,24 +91,62 @@ window.__ModuleLoader__.load({
           document.body.appendChild(pill);
           paint();
         }
-        function paint(msg) {
-          if (!pill) return;
-          pill.innerHTML = '<b>wallpaper</b> ' + (on ? 'ON' : 'OFF') + (msg ? ' · ' + msg : '') + ' (click)';
+
+        // ---------------- playback with a gesture fallback ----------------
+        function tryPlay(reason) {
+          if (disposed || !video || !on) return;
+          var p = video.play();
+          if (!p || !p.then) { state = 'playing'; paint(); return; }
+          p.then(function () {
+            state = 'playing';
+            paint();
+            log('playing (' + reason + ')');
+          }).catch(function (err) {
+            state = 'blocked';
+            paint();
+            log('play() rejected (' + reason + '): ' + (err && err.name) + ' ' + (err && err.message));
+            hookGesture();
+            // keep trying quietly: a policy change or a later gesture may unblock it
+            if (retryTimer) clearInterval(retryTimer);
+            var n = 0;
+            retryTimer = setInterval(function () {
+              n += 1;
+              if (disposed || n > 40) { clearInterval(retryTimer); retryTimer = null; return; }
+              if (!video.paused || !on) { clearInterval(retryTimer); retryTimer = null; return; }
+              video.play().then(function () { state = 'playing'; paint(); clearInterval(retryTimer); retryTimer = null; }).catch(function () {});
+            }, 1500);
+          });
+        }
+
+        function hookGesture() {
+          if (gestureHooked) return;
+          gestureHooked = true;
+          var resume = function () {
+            if (disposed) return;
+            log('user gesture seen; resuming playback');
+            tryPlay('gesture');
+            document.removeEventListener('pointerdown', resume, true);
+            document.removeEventListener('keydown', resume, true);
+            document.removeEventListener('wheel', resume, true);
+          };
+          document.addEventListener('pointerdown', resume, true);
+          document.addEventListener('keydown', resume, true);
+          document.addEventListener('wheel', resume, true);
         }
 
         function turnOn() {
           on = true;
           if (layer) layer.style.display = '';
           ensureOnStyle();
-          if (video) kick();
-          paint(video && video.readyState >= 3 ? 'live ' + video.videoWidth + 'x' + video.videoHeight : 'loading');
+          tryPlay('toggle-on');
         }
         function turnOff() {
           on = false;
           if (layer) layer.style.display = 'none';
           if (video) { try { video.pause(); } catch (e) {} }
+          if (retryTimer) { clearInterval(retryTimer); retryTimer = null; }
           dropOnStyle();
-          paint('video paused · UI restored');
+          paint();
         }
 
         function build() {
@@ -118,14 +169,16 @@ window.__ModuleLoader__.load({
 
           video = document.createElement('video');
           video.src = VIDEO_URL;
-          video.muted = true;
+          video.muted = true;             // required for autoplay
           video.defaultMuted = true;
+          video.volume = 0;
           video.loop = true;
           video.autoplay = true;
           video.playsInline = true;
           video.preload = 'auto';
           video.setAttribute('muted', '');
           video.setAttribute('playsinline', '');
+          video.setAttribute('webkit-playsinline', '');
           video.setAttribute('disablepictureinpicture', '');
           video.setAttribute('aria-hidden', 'true');
 
@@ -140,36 +193,25 @@ window.__ModuleLoader__.load({
           else host.appendChild(layer);
 
           video.addEventListener('canplay', function () {
-            log('video ready', video.videoWidth + 'x' + video.videoHeight, 'readyState', video.readyState);
-            paint('live ' + video.videoWidth + 'x' + video.videoHeight);
+            log('video ready ' + video.videoWidth + 'x' + video.videoHeight + ' readyState ' + video.readyState);
+            paint();
+            tryPlay('canplay');
           }, { once: true });
+          video.addEventListener('playing', function () { state = 'playing'; paint(); });
           video.addEventListener('error', function () {
-            log('video ERROR code', video.error ? video.error.code : '?', '- is the server on 127.0.0.1:8787?');
-            paint('video failed c' + (video.error ? video.error.code : '?'));
+            state = 'failed';
+            log('video ERROR code ' + (video.error ? video.error.code : '?') + ' - is the server on 127.0.0.1:8787?');
+            paint();
           }, { once: true });
 
           ensureOnStyle();
-          kick();
-          log('layer inserted into', host === document.body ? '<body>' : '<html>', '| body children', document.body ? document.body.children.length : -1);
-        }
-
-        function kick() {
-          if (disposed || !video) return;
-          var p = video.play();
-          if (p && p.catch) {
-            p.catch(function (err) {
-              retries += 1;
-              if (retries <= 30) retryTimer = setTimeout(kick, 800);
-              else { log('autoplay blocked:', err && err.message); paint('autoplay blocked'); }
-            });
-          }
+          tryPlay('build');
+          log('layer inserted into ' + (host === document.body ? '<body>' : '<html>'));
         }
 
         function teardown() {
-          // kept for reference only; the wallpaper is deliberately NOT torn down by the
-          // plugin lifecycle (see the note where ctx.effect used to be registered).
           disposed = true;
-          if (retryTimer) clearTimeout(retryTimer);
+          if (retryTimer) clearInterval(retryTimer);
           dropOnStyle();
           if (video) { try { video.pause(); } catch (e) {} video.removeAttribute('src'); video.load(); }
           [layer, layerStyle, pillStyleEl, pill].forEach(function (el) {
@@ -183,7 +225,6 @@ window.__ModuleLoader__.load({
           if (!document.body) { setTimeout(start, 30); return; }
           build();
           ensurePill();
-          paint(video && video.readyState >= 3 ? 'live' : 'loading');
         }
 
         if (document.readyState === 'loading') {
@@ -192,14 +233,9 @@ window.__ModuleLoader__.load({
           start();
         }
 
-        // NOTE: deliberately NO ctx.effect(teardown) here.
-        // The app's web boot disposes this client entry shortly after activation, and a
-        // teardown effect would remove the wallpaper layer again a few seconds after it
-        // appears (observed: "layer inserted" logged, then the layer gone with no
-        // MutationObserver record). The wallpaper is therefore intentionally independent
-        // of the plugin lifecycle: it is removed by reloading the window, and toggled by
-        // the pill. This is what makes the wallpaper appear on a NORMAL app start.
-        log('live wallpaper v1.4 installed; readyState =', document.readyState);
+        // NOTE: deliberately NO ctx.effect(teardown) here: the app releases this client
+        // entry shortly after activation, and a teardown effect would remove the layer.
+        log('live wallpaper v1.5 installed; readyState = ' + document.readyState);
       },
     };
   },

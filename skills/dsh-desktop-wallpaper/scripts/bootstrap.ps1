@@ -64,7 +64,7 @@ $skillName = Split-Path -Leaf $SkillDir
 Write-Host ('bootstrap: skill=' + $skillName + '  dshHome=' + $DshHome)
 
 # ---------------------------------------------------------------- 1) skill discovery
-Step '1/4  make the skill discoverable'
+Step '1/5  make the skill discoverable'
 if ($NoSkillLink) {
   Warn '-NoSkillLink given: skipped'
 } else {
@@ -89,7 +89,7 @@ if ($NoSkillLink) {
 }
 
 # ---------------------------------------------------------------- 2) plugin install
-Step '2/4  install the wallpaper plugin'
+Step '2/5  install the wallpaper plugin'
 $installer = Join-Path $SkillDir 'scripts\install-plugin.ps1'
 $pluginDir = Join-Path $SkillDir 'template\plugin'
 if (-not (Test-Path $installer)) { throw "missing $installer" }
@@ -98,7 +98,7 @@ if ($LASTEXITCODE -ne 0) { throw "plugin install failed (exit $LASTEXITCODE)" }
 Ok 'plugin installed and the import was verified'
 
 # ---------------------------------------------------------------- 3) video server
-Step '3/4  video server'
+Step '3/5  video server'
 $assets = Join-Path (Split-Path -Parent $InstallDir) 'assets'
 New-Item -ItemType Directory -Force -Path $assets | Out-Null
 $serverScript = Join-Path $SkillDir 'optional\video-server\wallpaper-server.mjs'
@@ -124,8 +124,41 @@ if (-not $serverUp) {
   Ok 'video server already running on 8787'
 }
 
-# ---------------------------------------------------------------- 4) logon task
-Step '4/4  keep the video server running at logon'
+# ---------------------------------------------------------------- 4) autoplay policy
+Step '4/5  autoplay policy'
+# A muted video should autoplay, but the Harness window may still block play(); the
+# reliable fix is the Chromium switch on the launch shortcut, so every normal start
+# carries it. Existing shortcuts are updated in place (a .bak-wallpaper copy is kept).
+$flag = '--autoplay-policy=no-user-gesture-required'
+try {
+  $sh = New-Object -ComObject WScript.Shell
+  $exeName = 'DeepSeek Harness.exe'
+  $seen = 0
+  foreach ($dir in @([Environment]::GetFolderPath('Desktop'), [Environment]::GetFolderPath('StartMenu'), [Environment]::GetFolderPath('CommonStartMenu'))) {
+    if (-not (Test-Path $dir)) { continue }
+    Get-ChildItem -Path $dir -Recurse -Filter *.lnk -ErrorAction SilentlyContinue | ForEach-Object {
+      $lnk = $sh.CreateShortcut($_.FullName)
+      if ($lnk.TargetPath -notlike ('*' + $exeName)) { return }
+      $seen++
+      if ($lnk.Arguments -match 'autoplay-policy') { Ok ('already set: ' + $_.Name); return }
+      Copy-Item $_.FullName ($_.FullName + '.bak-wallpaper') -Force -ErrorAction SilentlyContinue
+      $lnk.Arguments = ($lnk.Arguments + ' ' + $flag).Trim()
+      $lnk.Save()
+      Ok ('shortcut updated: ' + $_.Name)
+    }
+  }
+  if ($seen -eq 0) {
+    $p = Join-Path ([Environment]::GetFolderPath('Desktop')) 'DeepSeek Harness (wallpaper).lnk'
+    $lnk = $sh.CreateShortcut($p)
+    $lnk.TargetPath = (Join-Path (Split-Path $InstallDir -Parent) '..\deepseek\DeepSeek Harness.exe')
+    $lnk.Arguments = $flag
+    $lnk.Save()
+    Warn ('no Harness shortcut found; add this switch to yours manually: ' + $flag)
+  }
+} catch { Warn ('could not update shortcuts automatically: ' + $_.Exception.Message) }
+Warn ('manual equivalent: right-click the Harness shortcut -> Properties -> Target, append: ' + $flag)
+# ---------------------------------------------------------------- 5) logon task
+Step '5/5  keep the video server running at logon'
 if ($NoVideoTask) {
   Warn '-NoVideoTask given: skipped'
 } else {
