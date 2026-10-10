@@ -1,19 +1,39 @@
-﻿// DeepSeek Harness live wallpaper server.
-// Serves the Steam workshop video + poster over http://127.0.0.1:8787 for the userscript.
+// DeepSeek Harness live wallpaper server.
+// Serves the wallpaper video + poster over http://127.0.0.1:8787 for the client plugin.
+//
+// Video preference: a locally transcoded 1080p60 copy first (far cheaper to decode than a
+// 4K/120 fps original: measured 51% dropped frames before vs 4% after), then the original
+// workshop file as a fallback. Everything stays on local fixed disks.
 import fs from 'node:fs';
 import http from 'node:http';
+import path from 'node:path';
 import { exec } from 'node:child_process';
 
-const VIDEO = 'D:/SteamLibrary/steamapps/workshop/content/431960/3814486439/deepseek-cyberpunk-intro.mp4';
-const POSTER = 'E:/deepseek/05-工具箱/wallpaper/_frames/wallpaper-1920x1080.webp';
+const HERE = import.meta.dirname || path.dirname(new URL(import.meta.url).pathname);
+const CANDIDATES = [
+  path.join(HERE, 'assets', 'wallpaper-1080p60.mp4'),   // transcoded: preferred
+  path.join(HERE, 'wallpaper.mp4'),                     // generic local copy
+  'D:/SteamLibrary/steamapps/workshop/content/431960/3814486439/deepseek-cyberpunk-intro.mp4',
+];
+const VIDEO = CANDIDATES.find((p) => { try { return fs.existsSync(p); } catch { return false; } });
+const POSTERS = [
+  path.join(HERE, 'assets', 'wallpaper.webp'),
+  path.join(HERE, 'assets', 'poster.jpg'),
+  path.join(HERE, 'assets', 'preview.jpg'),
+];
+const POSTER = POSTERS.find((p) => { try { return fs.existsSync(p); } catch { return false; } });
 const PORT = 8787;
 const URL = 'http://127.0.0.1:8787/';
 
-if (!fs.existsSync(VIDEO)) {
-  console.error('[wallpaper] video not found: ' + VIDEO);
-  console.error('[wallpaper] subscribe to the workshop item in Steam, then rerun.');
-  setTimeout(() => process.exit(1), 6000);
+if (!VIDEO) {
+  console.error('[wallpaper] no video found. looked for:');
+  CANDIDATES.forEach((p) => console.error('  - ' + p));
+  console.error('[wallpaper] subscribe to the workshop item in Steam, or transcode and drop');
+  console.error('[wallpaper] a 1080p copy at assets/wallpaper-1080p60.mp4, then rerun.');
+  setTimeout(() => process.exit(1), 8000);
 }
+console.log('[wallpaper] video: ' + VIDEO);
+console.log('[wallpaper] poster: ' + (POSTER || '(none - still frames will be black)'));
 
 const videoBuf = fs.readFileSync(VIDEO);
 const posterBuf = fs.existsSync(POSTER) ? fs.readFileSync(POSTER) : null;

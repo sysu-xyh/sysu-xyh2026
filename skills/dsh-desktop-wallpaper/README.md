@@ -24,6 +24,10 @@
 
 - 使用者上手 / 交给 Agent 的一段话：[GETTING-STARTED.md](GETTING-STARTED.md)
 
+## 卡顿？先看这个
+
+- 4K 视频当背景会掉帧（实测 51% → 转 1080p 后 4%）：[reference/performance.md](reference/performance.md)
+
 ## 安装
 
 ```powershell

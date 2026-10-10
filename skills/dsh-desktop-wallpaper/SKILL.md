@@ -220,6 +220,7 @@ Register-ScheduledTask -TaskName 'DSH Wallpaper Video Server' -Action $act -Trig
 | `reference/getting-the-wallpaper.md` | 素材获取引导与合规注意（Agent 检查清单） |
 | `optional/video-server/wallpaper-server.mjs` | 本地视频服务（Range + CORS，仅 127.0.0.1） |
 | `optional/video-server/start-video-server-silent.vbs` | 静默启动包装（计划任务用） |
+| `reference/performance.md` | **卡顿排查**：丢帧率量化、4K→1080p 转码配方（含 ffmpeg 便携获取） |
 | `reference/failure-modes.md` | 各失败方案的实测现象与判定方法 + **元教训 M1–M9**（做宿主内改动的方法论） |
 | `reference/field-notes/` | **现场记录**：skill 未覆盖的问题与解法（含回填协议） |
 | `scripts/record-field-note.ps1` | 写现场记录 + **仅本地**提交（脱敏扫描，绝不推送） |
