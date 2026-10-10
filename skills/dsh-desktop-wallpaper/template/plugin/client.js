@@ -74,7 +74,7 @@ window.__ModuleLoader__.load({
           var view = video && video.readyState >= 3
             ? (video.videoWidth + 'x' + video.videoHeight)
             : (state === 'blocked' ? 'autoplay blocked' : 'loading');
-          var suffix = state === 'blocked' ? ' - click anywhere' : '';
+          var suffix = state === 'blocked' ? ' - click anywhere' : (state === 'source' ? ' - video source down' : '');
           pill.innerHTML = '<b>wallpaper</b> ' + (on ? 'ON' : 'OFF') + (on ? ' \u00b7 ' + view + suffix : ' (click)') + (on ? ' (click)' : '');
         }
 
@@ -102,9 +102,15 @@ window.__ModuleLoader__.load({
             paint();
             log('playing (' + reason + ')');
           }).catch(function (err) {
-            state = 'blocked';
+            // A failed source (server down / 404) also rejects play(); that is NOT an
+            // autoplay problem, so classify it separately instead of crying "blocked".
+            var srcFailed = !!(video && video.error) || (video && video.networkState === 3);
+            state = srcFailed ? 'source' : 'blocked';
             paint();
-            log('play() rejected (' + reason + '): ' + (err && err.name) + ' ' + (err && err.message));
+            log('play() rejected (' + reason + '): ' + (err && err.name) + ' ' + (err && err.message) +
+                (srcFailed ? ' | media error code ' + (video.error ? video.error.code : '?') +
+                  ' - the video source is unavailable (is the server on 127.0.0.1:8787 running?)'
+                : ' | muted=' + video.muted + ' volume=' + video.volume));
             hookGesture();
             // keep trying quietly: a policy change or a later gesture may unblock it
             if (retryTimer) clearInterval(retryTimer);
@@ -235,7 +241,7 @@ window.__ModuleLoader__.load({
 
         // NOTE: deliberately NO ctx.effect(teardown) here: the app releases this client
         // entry shortly after activation, and a teardown effect would remove the layer.
-        log('live wallpaper v1.5 installed; readyState = ' + document.readyState);
+        log('live wallpaper v1.6 installed; readyState = ' + document.readyState);
       },
     };
   },
